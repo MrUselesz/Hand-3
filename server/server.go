@@ -5,27 +5,35 @@ import (
 	"context"
 	"log"
 	"net"
+	"time"
 
 	"google.golang.org/grpc"
 )
 
 type ITU_databaseServer struct {
 	proto.UnimplementedITUDatabaseServer
-	students []string
+	smessages []string
 }
 
-func (s *ITU_databaseServer) GetStudents(ctx context.Context, in *proto.Empty) (*proto.Students, error) {
-	return &proto.Students{Students: s.students}, nil
+func (s *ITU_databaseServer) SendRecieve(ctx context.Context, in *proto.Empty) (*proto.ServerMessage, error) {
+	return &proto.ServerMessage{Smessages: s.smessages}, nil
 }
 
 func main() {
-	server := &ITU_databaseServer{students: []string{}}
-	server.students = append(server.students, "John")
-	server.students = append(server.students, "Jane")
-	server.students = append(server.students, "Alice")
-	server.students = append(server.students, "Bob")
 
+	server := &ITU_databaseServer{smessages: []string{}}
 	server.start_server()
+
+	time.Sleep(30*time.Second)
+
+	cmessage, err := server.SendRecieve(context.Background(), &proto.ClientMessage{})
+	if err != nil {
+		log.Fatalf("Not working")
+	}
+
+	//server.smessages = append(server.smessages, cmessage)
+	log.Fatalln(cmessage)
+
 }
 
 func (s *ITU_databaseServer) start_server() {
