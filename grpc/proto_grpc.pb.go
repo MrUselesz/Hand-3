@@ -17,7 +17,11 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ITUDatabaseClient interface {
-	SendRecieve(ctx context.Context, in *ClientMessage, opts ...grpc.CallOption) (*ServerMessage, error)
+	//This sends the data from client to server
+	ClientSend(ctx context.Context, opts ...grpc.CallOption) (ITUDatabase_ClientSendClient, error)
+	//This sends the data from Server to client
+	ServerSend(ctx context.Context, in *Empty, opts ...grpc.CallOption) (ITUDatabase_ServerSendClient, error)
+	Sender(ctx context.Context, opts ...grpc.CallOption) (ITUDatabase_SenderClient, error)
 }
 
 type iTUDatabaseClient struct {
@@ -28,20 +32,112 @@ func NewITUDatabaseClient(cc grpc.ClientConnInterface) ITUDatabaseClient {
 	return &iTUDatabaseClient{cc}
 }
 
-func (c *iTUDatabaseClient) SendRecieve(ctx context.Context, in *ClientMessage, opts ...grpc.CallOption) (*ServerMessage, error) {
-	out := new(ServerMessage)
-	err := c.cc.Invoke(ctx, "/ITUDatabase/SendRecieve", in, out, opts...)
+func (c *iTUDatabaseClient) ClientSend(ctx context.Context, opts ...grpc.CallOption) (ITUDatabase_ClientSendClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_ITUDatabase_serviceDesc.Streams[0], "/ITUDatabase/ClientSend", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &iTUDatabaseClientSendClient{stream}
+	return x, nil
+}
+
+type ITUDatabase_ClientSendClient interface {
+	Send(*ClientMessage) error
+	CloseAndRecv() (*Empty, error)
+	grpc.ClientStream
+}
+
+type iTUDatabaseClientSendClient struct {
+	grpc.ClientStream
+}
+
+func (x *iTUDatabaseClientSendClient) Send(m *ClientMessage) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *iTUDatabaseClientSendClient) CloseAndRecv() (*Empty, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(Empty)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *iTUDatabaseClient) ServerSend(ctx context.Context, in *Empty, opts ...grpc.CallOption) (ITUDatabase_ServerSendClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_ITUDatabase_serviceDesc.Streams[1], "/ITUDatabase/ServerSend", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &iTUDatabaseServerSendClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type ITUDatabase_ServerSendClient interface {
+	Recv() (*ServerMessage, error)
+	grpc.ClientStream
+}
+
+type iTUDatabaseServerSendClient struct {
+	grpc.ClientStream
+}
+
+func (x *iTUDatabaseServerSendClient) Recv() (*ServerMessage, error) {
+	m := new(ServerMessage)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *iTUDatabaseClient) Sender(ctx context.Context, opts ...grpc.CallOption) (ITUDatabase_SenderClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_ITUDatabase_serviceDesc.Streams[2], "/ITUDatabase/Sender", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &iTUDatabaseSenderClient{stream}
+	return x, nil
+}
+
+type ITUDatabase_SenderClient interface {
+	Send(*ClientMessage) error
+	Recv() (*ServerMessage, error)
+	grpc.ClientStream
+}
+
+type iTUDatabaseSenderClient struct {
+	grpc.ClientStream
+}
+
+func (x *iTUDatabaseSenderClient) Send(m *ClientMessage) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *iTUDatabaseSenderClient) Recv() (*ServerMessage, error) {
+	m := new(ServerMessage)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // ITUDatabaseServer is the server API for ITUDatabase service.
 // All implementations must embed UnimplementedITUDatabaseServer
 // for forward compatibility
 type ITUDatabaseServer interface {
-	SendRecieve(context.Context, *ClientMessage) (*ServerMessage, error)
+	//This sends the data from client to server
+	ClientSend(ITUDatabase_ClientSendServer) error
+	//This sends the data from Server to client
+	ServerSend(*Empty, ITUDatabase_ServerSendServer) error
+	Sender(ITUDatabase_SenderServer) error
 	mustEmbedUnimplementedITUDatabaseServer()
 }
 
@@ -49,8 +145,14 @@ type ITUDatabaseServer interface {
 type UnimplementedITUDatabaseServer struct {
 }
 
-func (UnimplementedITUDatabaseServer) SendRecieve(context.Context, *ClientMessage) (*ServerMessage, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendRecieve not implemented")
+func (UnimplementedITUDatabaseServer) ClientSend(ITUDatabase_ClientSendServer) error {
+	return status.Errorf(codes.Unimplemented, "method ClientSend not implemented")
+}
+func (UnimplementedITUDatabaseServer) ServerSend(*Empty, ITUDatabase_ServerSendServer) error {
+	return status.Errorf(codes.Unimplemented, "method ServerSend not implemented")
+}
+func (UnimplementedITUDatabaseServer) Sender(ITUDatabase_SenderServer) error {
+	return status.Errorf(codes.Unimplemented, "method Sender not implemented")
 }
 func (UnimplementedITUDatabaseServer) mustEmbedUnimplementedITUDatabaseServer() {}
 
@@ -65,33 +167,100 @@ func RegisterITUDatabaseServer(s *grpc.Server, srv ITUDatabaseServer) {
 	s.RegisterService(&_ITUDatabase_serviceDesc, srv)
 }
 
-func _ITUDatabase_SendRecieve_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ClientMessage)
-	if err := dec(in); err != nil {
+func _ITUDatabase_ClientSend_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ITUDatabaseServer).ClientSend(&iTUDatabaseClientSendServer{stream})
+}
+
+type ITUDatabase_ClientSendServer interface {
+	SendAndClose(*Empty) error
+	Recv() (*ClientMessage, error)
+	grpc.ServerStream
+}
+
+type iTUDatabaseClientSendServer struct {
+	grpc.ServerStream
+}
+
+func (x *iTUDatabaseClientSendServer) SendAndClose(m *Empty) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *iTUDatabaseClientSendServer) Recv() (*ClientMessage, error) {
+	m := new(ClientMessage)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(ITUDatabaseServer).SendRecieve(ctx, in)
+	return m, nil
+}
+
+func _ITUDatabase_ServerSend_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ITUDatabase/SendRecieve",
+	return srv.(ITUDatabaseServer).ServerSend(m, &iTUDatabaseServerSendServer{stream})
+}
+
+type ITUDatabase_ServerSendServer interface {
+	Send(*ServerMessage) error
+	grpc.ServerStream
+}
+
+type iTUDatabaseServerSendServer struct {
+	grpc.ServerStream
+}
+
+func (x *iTUDatabaseServerSendServer) Send(m *ServerMessage) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _ITUDatabase_Sender_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ITUDatabaseServer).Sender(&iTUDatabaseSenderServer{stream})
+}
+
+type ITUDatabase_SenderServer interface {
+	Send(*ServerMessage) error
+	Recv() (*ClientMessage, error)
+	grpc.ServerStream
+}
+
+type iTUDatabaseSenderServer struct {
+	grpc.ServerStream
+}
+
+func (x *iTUDatabaseSenderServer) Send(m *ServerMessage) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *iTUDatabaseSenderServer) Recv() (*ClientMessage, error) {
+	m := new(ClientMessage)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ITUDatabaseServer).SendRecieve(ctx, req.(*ClientMessage))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 var _ITUDatabase_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ITUDatabase",
 	HandlerType: (*ITUDatabaseServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "SendRecieve",
-			Handler:    _ITUDatabase_SendRecieve_Handler,
+			StreamName:    "ClientSend",
+			Handler:       _ITUDatabase_ClientSend_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "ServerSend",
+			Handler:       _ITUDatabase_ServerSend_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "Sender",
+			Handler:       _ITUDatabase_Sender_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "grpc/proto.proto",
 }

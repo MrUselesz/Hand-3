@@ -2,17 +2,24 @@ syntax = "proto3";
 option go_package = "ITUServer/grpc/proto";
 
 message ClientMessage {
-    string cmessages = 1;
+    string message = 1;
 }
 
 message ServerMessage {
-    string smessages = 1;
+    string message = 1;
 }
+
 
 message Empty {}
 
 service ITUDatabase {
-    rpc SendRecieve (ClientMessage) returns (ServerMessage) {};
+    //This sends the data from client to server 
+    rpc ClientSend (stream ClientMessage) returns (Empty) {};
+    //This sends the data from Server to client 
+    rpc ServerSend (Empty) returns (stream ServerMessage) {};
     
+    rpc Sender (stream ClientMessage) returns (stream ServerMessage) {};
 }
+
+
 

@@ -2,38 +2,81 @@ package main
 
 import (
 	proto "ITUServer/grpc"
-	"context"
+	"fmt"
+	"io"
 	"log"
 	"net"
-	"time"
 
 	"google.golang.org/grpc"
 )
 
 type ITU_databaseServer struct {
 	proto.UnimplementedITUDatabaseServer
-	smessages []string
 }
 
-func (s *ITU_databaseServer) SendRecieve(ctx context.Context, in *proto.Empty) (*proto.ServerMessage, error) {
-	return &proto.ServerMessage{Smessages: s.smessages}, nil
-}
+func (sender *ITU_databaseServer) Sender(stream proto.ITUDatabase_SenderServer) error {
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
 
-func main() {
+		fmt.Println("Recieved ", req.GetMessage())
 
-	server := &ITU_databaseServer{smessages: []string{}}
-	server.start_server()
+		if err := stream.Send(&proto.ServerMessage{Message: req.GetMessage()}); err != nil {
+			return nil
+		}
 
-	time.Sleep(30*time.Second)
-
-	cmessage, err := server.SendRecieve(context.Background(), &proto.ClientMessage{})
-	if err != nil {
-		log.Fatalf("Not working")
 	}
 
-	//server.smessages = append(server.smessages, cmessage)
-	log.Fatalln(cmessage)
+	return nil
+}
 
+/*
+recieves a message from the Client.
+
+	func (recieve *ITU_databaseServer) ClientSend(stream proto.ITUDatabase_ClientSendServer) error {
+		value, err := stream.Recv()
+		if err == io.EOF {
+			return stream.SendAndClose(&proto.Empty{})
+		}
+		if err != nil {
+			log.Fatalf("Not working")
+
+		}
+		fmt.Println(value.GetMessage())
+		return err
+	}
+
+	func (send *ITU_databaseServer) ServerSend(req *proto.Empty, stream proto.ITUDatabase_ServerSendServer) error {
+		for {
+			select {
+			case <-stream.Context().Done():
+				return status.Error(codes.Canceled, "Stream has ended")
+			default:
+				time.Sleep(1 * time.Minute)
+
+				value := "Complete"
+
+				err := stream.SendMsg(&proto.ServerMessage{
+					Message: value,
+				})
+				if err != nil {
+					log.Fatalf("Not working")
+
+				}
+			}
+
+		}
+	}
+*/
+func main() {
+
+	server := &ITU_databaseServer{}
+	server.start_server()
 }
 
 func (s *ITU_databaseServer) start_server() {
