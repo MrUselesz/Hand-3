@@ -44,4 +44,29 @@ func main() {
 		fmt.Println(res.GetMessage())
 	}
 
+
+	/*
+		stream, err := client.ClientSend(context.Background())
+		stream.Send(&proto.ClientMessage{
+			Message: line,
+		})
+		if err != nil {
+			log.Fatalf("Not working")
+		}
+
+		importStream, err := client.ServerSend(context.Background(), &proto.Empty{})
+
+		go func() {
+			for {
+				value, err := importStream.Recv()
+				if err == io.EOF {
+					return
+				}
+				if err != nil {
+					log.Fatalf("Not working")
+				}
+				fmt.Println(value.GetMessage())
+			}
+		}()
+	*/
 }
