@@ -21,7 +21,10 @@ type ITUDatabaseClient interface {
 	ClientSend(ctx context.Context, opts ...grpc.CallOption) (ITUDatabase_ClientSendClient, error)
 	//This sends the data from Server to client
 	ServerSend(ctx context.Context, in *Empty, opts ...grpc.CallOption) (ITUDatabase_ServerSendClient, error)
-	Sender(ctx context.Context, opts ...grpc.CallOption) (ITUDatabase_SenderClient, error)
+	//This sends the data from client to server that the client joins
+	Join(ctx context.Context, opts ...grpc.CallOption) (ITUDatabase_JoinClient, error)
+	//This sends the data from Server to client that clients has left
+	Leave(ctx context.Context, in *Empty, opts ...grpc.CallOption) (ITUDatabase_LeaveClient, error)
 }
 
 type iTUDatabaseClient struct {
@@ -98,31 +101,66 @@ func (x *iTUDatabaseServerSendClient) Recv() (*ServerMessage, error) {
 	return m, nil
 }
 
-func (c *iTUDatabaseClient) Sender(ctx context.Context, opts ...grpc.CallOption) (ITUDatabase_SenderClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_ITUDatabase_serviceDesc.Streams[2], "/ITUDatabase/Sender", opts...)
+func (c *iTUDatabaseClient) Join(ctx context.Context, opts ...grpc.CallOption) (ITUDatabase_JoinClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_ITUDatabase_serviceDesc.Streams[2], "/ITUDatabase/Join", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &iTUDatabaseSenderClient{stream}
+	x := &iTUDatabaseJoinClient{stream}
 	return x, nil
 }
 
-type ITUDatabase_SenderClient interface {
-	Send(*ClientMessage) error
-	Recv() (*ServerMessage, error)
+type ITUDatabase_JoinClient interface {
+	Send(*Joining) error
+	CloseAndRecv() (*Empty, error)
 	grpc.ClientStream
 }
 
-type iTUDatabaseSenderClient struct {
+type iTUDatabaseJoinClient struct {
 	grpc.ClientStream
 }
 
-func (x *iTUDatabaseSenderClient) Send(m *ClientMessage) error {
+func (x *iTUDatabaseJoinClient) Send(m *Joining) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *iTUDatabaseSenderClient) Recv() (*ServerMessage, error) {
-	m := new(ServerMessage)
+func (x *iTUDatabaseJoinClient) CloseAndRecv() (*Empty, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(Empty)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *iTUDatabaseClient) Leave(ctx context.Context, in *Empty, opts ...grpc.CallOption) (ITUDatabase_LeaveClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_ITUDatabase_serviceDesc.Streams[3], "/ITUDatabase/Leave", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &iTUDatabaseLeaveClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type ITUDatabase_LeaveClient interface {
+	Recv() (*Leaving, error)
+	grpc.ClientStream
+}
+
+type iTUDatabaseLeaveClient struct {
+	grpc.ClientStream
+}
+
+func (x *iTUDatabaseLeaveClient) Recv() (*Leaving, error) {
+	m := new(Leaving)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -137,7 +175,10 @@ type ITUDatabaseServer interface {
 	ClientSend(ITUDatabase_ClientSendServer) error
 	//This sends the data from Server to client
 	ServerSend(*Empty, ITUDatabase_ServerSendServer) error
-	Sender(ITUDatabase_SenderServer) error
+	//This sends the data from client to server that the client joins
+	Join(ITUDatabase_JoinServer) error
+	//This sends the data from Server to client that clients has left
+	Leave(*Empty, ITUDatabase_LeaveServer) error
 	mustEmbedUnimplementedITUDatabaseServer()
 }
 
@@ -151,8 +192,11 @@ func (UnimplementedITUDatabaseServer) ClientSend(ITUDatabase_ClientSendServer) e
 func (UnimplementedITUDatabaseServer) ServerSend(*Empty, ITUDatabase_ServerSendServer) error {
 	return status.Errorf(codes.Unimplemented, "method ServerSend not implemented")
 }
-func (UnimplementedITUDatabaseServer) Sender(ITUDatabase_SenderServer) error {
-	return status.Errorf(codes.Unimplemented, "method Sender not implemented")
+func (UnimplementedITUDatabaseServer) Join(ITUDatabase_JoinServer) error {
+	return status.Errorf(codes.Unimplemented, "method Join not implemented")
+}
+func (UnimplementedITUDatabaseServer) Leave(*Empty, ITUDatabase_LeaveServer) error {
+	return status.Errorf(codes.Unimplemented, "method Leave not implemented")
 }
 func (UnimplementedITUDatabaseServer) mustEmbedUnimplementedITUDatabaseServer() {}
 
@@ -214,30 +258,51 @@ func (x *iTUDatabaseServerSendServer) Send(m *ServerMessage) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _ITUDatabase_Sender_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(ITUDatabaseServer).Sender(&iTUDatabaseSenderServer{stream})
+func _ITUDatabase_Join_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ITUDatabaseServer).Join(&iTUDatabaseJoinServer{stream})
 }
 
-type ITUDatabase_SenderServer interface {
-	Send(*ServerMessage) error
-	Recv() (*ClientMessage, error)
+type ITUDatabase_JoinServer interface {
+	SendAndClose(*Empty) error
+	Recv() (*Joining, error)
 	grpc.ServerStream
 }
 
-type iTUDatabaseSenderServer struct {
+type iTUDatabaseJoinServer struct {
 	grpc.ServerStream
 }
 
-func (x *iTUDatabaseSenderServer) Send(m *ServerMessage) error {
+func (x *iTUDatabaseJoinServer) SendAndClose(m *Empty) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *iTUDatabaseSenderServer) Recv() (*ClientMessage, error) {
-	m := new(ClientMessage)
+func (x *iTUDatabaseJoinServer) Recv() (*Joining, error) {
+	m := new(Joining)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
+}
+
+func _ITUDatabase_Leave_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ITUDatabaseServer).Leave(m, &iTUDatabaseLeaveServer{stream})
+}
+
+type ITUDatabase_LeaveServer interface {
+	Send(*Leaving) error
+	grpc.ServerStream
+}
+
+type iTUDatabaseLeaveServer struct {
+	grpc.ServerStream
+}
+
+func (x *iTUDatabaseLeaveServer) Send(m *Leaving) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 var _ITUDatabase_serviceDesc = grpc.ServiceDesc{
@@ -256,10 +321,14 @@ var _ITUDatabase_serviceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 		{
-			StreamName:    "Sender",
-			Handler:       _ITUDatabase_Sender_Handler,
-			ServerStreams: true,
+			StreamName:    "Join",
+			Handler:       _ITUDatabase_Join_Handler,
 			ClientStreams: true,
+		},
+		{
+			StreamName:    "Leave",
+			Handler:       _ITUDatabase_Leave_Handler,
+			ServerStreams: true,
 		},
 	},
 	Metadata: "grpc/proto.proto",
