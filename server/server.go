@@ -24,11 +24,11 @@ func (joining *ITU_databaseServer) Join(stream proto.ITUDatabase_JoinServer) err
 			return nil
 		}
 		if err != nil {
-			return err
+			return nil
 		}
-
-		fmt.Println("Recieved ", req.GetName())
 		name = req.GetName()
+		fmt.Println("Recieved ", name)
+
 	}
 
 	return nil
@@ -41,11 +41,12 @@ func (recieve *ITU_databaseServer) ClientSend(stream proto.ITUDatabase_ClientSen
 			return nil
 		}
 		if err != nil {
-			return err
+			return nil
 		}
-
-		fmt.Println("Recieved ", req.GetMessage())
+		name = req.GetName()
 		message = req.GetMessage()
+		fmt.Println("Recieved ", name, " ", message)
+
 	}
 
 	return nil
@@ -53,20 +54,23 @@ func (recieve *ITU_databaseServer) ClientSend(stream proto.ITUDatabase_ClientSen
 
 func (sender *ITU_databaseServer) ServerSend(req *proto.Empty, stream proto.ITUDatabase_ServerSendServer) error {
 	for {
-		if name != "Vagina" {
-			if err := stream.Send(&proto.ServerMessage{Message: name}); err != nil {
-				return err
-			}
-			fmt.Println("Sending ", name)
-			name = "Vagina"
-		}
-		if message != "Penis" {
+
+		if message != "" {
 			if err := stream.Send(&proto.ServerMessage{Message: message}); err != nil {
-				return err
+				log.Fatalf("Failed to send: %v", err)
 			}
 			fmt.Println("Sending ", message)
-			message = "Penis"
-
+			message = ""
+			name = ""
+			break
+		} else if name != "" && message == "" {
+			if err := stream.Send(&proto.ServerMessage{Name: name + "Has joined the server"}); err != nil {
+				log.Fatalf("Failed to send: %v", err)
+			}
+			fmt.Println("Sending ", name)
+			name = ""
+			message = ""
+			break
 		}
 
 	}
@@ -77,8 +81,8 @@ func (sender *ITU_databaseServer) ServerSend(req *proto.Empty, stream proto.ITUD
 func main() {
 
 	server := &ITU_databaseServer{}
-	message = "Penis"
-	name = "Vagina"
+	message = ""
+	name = ""
 	server.start_server()
 }
 

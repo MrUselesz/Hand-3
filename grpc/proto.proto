@@ -7,7 +7,8 @@ message ClientMessage {
 }
 
 message ServerMessage {
-    string message = 1;
+    string name = 1;
+    string message = 2;
 }
 
 message Joining {
