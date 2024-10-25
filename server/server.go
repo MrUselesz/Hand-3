@@ -6,81 +6,102 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 
 	"google.golang.org/grpc"
 )
 
 type ITU_databaseServer struct {
 	proto.UnimplementedITUDatabaseServer
+	mu      sync.Mutex
+	clients map[string]proto.ITUDatabase_SendReceiveServer
 }
 
 var message string
 var name string
 
-func (joining *ITU_databaseServer) Join(stream proto.ITUDatabase_JoinServer) error {
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return nil
-		}
-		name = req.GetName()
-		fmt.Println("Recieved ", name)
+func (s *ITU_databaseServer) SendReceive(stream proto.ITUDatabase_SendReceiveServer) error {
+	// Register client
+	firstMsg, err := stream.Recv()
+	if err != nil {
+		log.Printf("Error receiving initial message: %v", err)
+		return err
+	}
+	name := firstMsg.GetName()
+	log.Printf("%s joined", name)
 
+	s.mu.Lock()
+	s.clients[name] = stream
+	s.mu.Unlock()
+
+	for clientName, clientStream := range s.clients {
+		if err := clientStream.Send(&proto.ServerMessage{Name: name, Message: " Has joined the server."}); err != nil {
+			log.Printf("Error sending to %s: %v", clientName, err)
+		}
 	}
 
-	return nil
-}
-
-func (recieve *ITU_databaseServer) ClientSend(stream proto.ITUDatabase_ClientSendServer) error {
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return nil
-		}
-		name = req.GetName()
-		message = req.GetMessage()
-		fmt.Println("Recieved ", name, " ", message)
-
-	}
-
-	return nil
-}
-
-func (sender *ITU_databaseServer) ServerSend(req *proto.Empty, stream proto.ITUDatabase_ServerSendServer) error {
-	for {
-
-		if message != "" {
-			if err := stream.Send(&proto.ServerMessage{Message: message}); err != nil {
-				log.Fatalf("Failed to send: %v", err)
+	defer func() {
+		// Handle client disconnection
+		log.Printf("%s left", name)
+		s.mu.Lock()
+		delete(s.clients, name)
+		for clientName, clientStream := range s.clients {
+			if err := clientStream.Send(&proto.ServerMessage{Name: name, Message: " Has left the server."}); err != nil {
+				log.Printf("Error sending to %s: %v", clientName, err)
 			}
-			fmt.Println("Sending ", message)
-			message = ""
-			name = ""
-			break
-		} else if name != "" && message == "" {
-			if err := stream.Send(&proto.ServerMessage{Name: name + "Has joined the server"}); err != nil {
-				log.Fatalf("Failed to send: %v", err)
-			}
-			fmt.Println("Sending ", name)
-			name = ""
-			message = ""
-			break
 		}
+		s.mu.Unlock()
+	}()
 
-	}
+	// Goroutine for receiving messages from the client and broadcasting
+	go func() {
+		for {
+			msg, err := stream.Recv()
+			if err == io.EOF {
+				return
+			}
+			if err != nil {
+				log.Printf("Error receiving from %s: %v", name, err)
+				return
+			}
+			log.Printf("Received message from %s: %s", name, msg.Message)
 
+			// Broadcast received message to all clients
+
+			if msg.GetMessage() == "/leave\n" {
+				log.Printf("%s left", name)
+				s.mu.Lock()
+				delete(s.clients, name)
+				for clientName, clientStream := range s.clients {
+					if err := clientStream.Send(&proto.ServerMessage{Name: name, Message: " Has left the server."}); err != nil {
+						log.Printf("Error sending to %s: %v", clientName, err)
+					}
+				}
+
+				s.mu.Unlock()
+			} else {
+				s.mu.Lock()
+				for clientName, clientStream := range s.clients {
+					if err := clientStream.Send(&proto.ServerMessage{Name: name, Message: msg.GetMessage()}); err != nil {
+						log.Printf("Error sending to %s: %v", clientName, err)
+					}
+				}
+				s.mu.Unlock()
+			}
+
+		}
+	}()
+
+	<-stream.Context().Done()
 	return nil
 }
 
 func main() {
 
-	server := &ITU_databaseServer{}
+	server := &ITU_databaseServer{clients: make(map[string]proto.ITUDatabase_SendReceiveServer)}
+	for name := range server.clients {
+		log.Println(" -", name)
+	}
 	message = ""
 	name = ""
 	server.start_server()

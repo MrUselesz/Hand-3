@@ -4,33 +4,23 @@ option go_package = "ITUServer/grpc/proto";
 message ClientMessage {
     string name = 1;
     string message = 2;
+    uint32 lamport = 3;
 }
 
 message ServerMessage {
     string name = 1;
     string message = 2;
+    uint32 lamport = 3;
 }
 
-message Joining {
-    string name = 1;
-}
-message Leaving {
-    string name = 1;
-}
+
 
 
 message Empty {}
 
 service ITUDatabase {
-    //This sends the data from client to server 
-    rpc ClientSend (stream ClientMessage) returns (Empty) {};
-    //This sends the data from Server to client 
-    rpc ServerSend (Empty) returns (stream ServerMessage) {};
-    
-    //This sends the data from client to server that the client joins
-    rpc Join (stream Joining) returns (Empty) {};
-    //This sends the data from Server to client that clients has left  
-    rpc Leave (Empty) returns (stream Leaving) {};
+   
+    rpc SendReceive (stream ClientMessage) returns (stream ServerMessage) {};
     
 }
 
