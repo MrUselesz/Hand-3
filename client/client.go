@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -17,13 +18,21 @@ import (
 var name = ""
 var lamport uint32
 var left bool
+var newLine string
 
 func main() {
+
+	if runtime.GOOS == "windows" {
+		newLine = "\r\n"
+	} else {
+		newLine = "\n"
+	}
+
 	for {
 
 		left = false
 		lamport = 0
-		file, err := openLogFile("./mylog.log")
+		file, err := openLogFile("../mylog.log")
 		if err != nil {
 			log.Fatalf("Not working")
 		}
@@ -45,7 +54,7 @@ func main() {
 			log.Fatalf("Did not work")
 		}
 		lamport += 1
-		log.Println(strings.TrimRight(line, "\n"), ": Sending message to join server", strconv.FormatUint(uint64(lamport), 10))
+		log.Println(strings.TrimRight(line, newLine), ": Sending message to join server", strconv.FormatUint(uint64(lamport), 10))
 		stream.Send(&proto.ClientMessage{
 			Name:    line,
 			Lamport: lamport,
@@ -82,8 +91,9 @@ func receiver(stream proto.Chitchat_SendReceiveClient) {
 			lamport = res.GetLamport()
 		}
 		lamport += 1
-		log.Println(strings.TrimRight(name, "\n"), "Recieved", strings.TrimRight(res.GetName(), "\n"), ": ", strings.TrimRight(res.GetMessage(), "\n"), " ", strconv.FormatUint(uint64(lamport), 10))
 
+		log.Println(strings.TrimRight(name, newLine), "Recieved", strings.TrimRight(res.GetName(), newLine), ": ", strings.TrimRight(res.GetMessage(), newLine), " ", strconv.FormatUint(uint64(lamport), 10))
+		fmt.Println(strings.TrimRight(res.GetName(), newLine), ": ", strings.TrimRight(res.GetMessage(), newLine))
 	}
 }
 
@@ -102,12 +112,12 @@ func Sender(client proto.ChitchatClient, stream proto.Chitchat_SendReceiveClient
 				Message: line,
 				Lamport: lamport,
 			})
-			log.Println(strings.TrimRight(name, "\n"), ": Sends message", strings.TrimRight(line, "\n"), " ", strconv.FormatUint(uint64(lamport), 10))
-			if line == "/leave\n" {
+			log.Println(strings.TrimRight(name, newLine), ": Sends message", strings.TrimRight(line, newLine), " ", strconv.FormatUint(uint64(lamport), 10))
+			if line == "/leave"+newLine {
 				break
 			}
 		} else {
-			fmt.Println(strings.TrimRight(name, "\n"), " Message to long.")
+			fmt.Println(strings.TrimRight(name, newLine), " Message to long.")
 		}
 
 	}

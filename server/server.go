@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -22,6 +23,7 @@ type chitchatServer struct {
 var message string
 var name string
 var lamport uint32
+var newLine string
 
 func (s *chitchatServer) SendReceive(stream proto.Chitchat_SendReceiveServer) error {
 	// Register client
@@ -39,12 +41,12 @@ func (s *chitchatServer) SendReceive(stream proto.Chitchat_SendReceiveServer) er
 		lamport = firstMsg.GetLamport()
 	}
 	lamport++
-	log.Println("%s recieved that", strings.TrimRight(name, "\n"), " has joined us ", lamport)
+	log.Println("%s recieved that", strings.TrimRight(name, newLine), " has joined us ", lamport)
 	lamport += 1
 	for clientName, clientStream := range s.clients {
-		log.Println("%s sent message to ", strings.TrimRight(clientName, "\n"), "that", strings.TrimRight(name, "\n"), "has joined", lamport)
+		log.Println("%s sent message to ", strings.TrimRight(clientName, newLine), "that", strings.TrimRight(name, newLine), "has joined", lamport)
 		if err := clientStream.Send(&proto.ServerMessage{Name: name, Message: " Has joined the server.", Lamport: lamport}); err != nil {
-			log.Printf("Error sending to %s: %v", strings.TrimRight(clientName, "\n"), err)
+			log.Printf("Error sending to %s: %v", strings.TrimRight(clientName, newLine), err)
 		}
 
 	}
@@ -65,15 +67,15 @@ func (s *chitchatServer) SendReceive(stream proto.Chitchat_SendReceiveServer) er
 			}
 			lamport += 1
 
-			if msg.GetMessage() == "/leave\n" {
+			if msg.GetMessage() == "/leave" {
 				s.mu.Lock()
-				log.Println("%s recieved message about leaving from", strings.TrimRight(name, "\n"), lamport)
+				log.Println("%s recieved message about leaving from", strings.TrimRight(name, newLine), lamport)
 				delete(s.clients, name)
 				lamport += 1
 				for clientName, clientStream := range s.clients {
-					log.Println("%s we send message to ", strings.TrimRight(clientName, "\n"), " that ", strings.TrimRight(name, "\n"), "has left", lamport)
+					log.Println("%s we send message to ", strings.TrimRight(clientName, newLine), " that ", strings.TrimRight(name, newLine), "has left", lamport)
 					if err := clientStream.Send(&proto.ServerMessage{Name: name, Message: " Has left the server.", Lamport: lamport}); err != nil {
-						log.Printf("Error sending to %s: %v", strings.TrimRight(clientName, "\n"), err)
+						log.Printf("Error sending to %s: %v", strings.TrimRight(clientName, newLine), err)
 					}
 
 				}
@@ -81,12 +83,12 @@ func (s *chitchatServer) SendReceive(stream proto.Chitchat_SendReceiveServer) er
 				s.mu.Unlock()
 			} else {
 				s.mu.Lock()
-				log.Println("%s recieved message from", strings.TrimRight(name, "\n"), lamport)
+				log.Println("%s recieved message from", strings.TrimRight(name, newLine), lamport)
 				lamport += 1
 				for clientName, clientStream := range s.clients {
-					log.Println("%s we send message to ", strings.TrimRight(clientName, "\n"), lamport)
+					log.Println("%s we send message to ", strings.TrimRight(clientName, newLine), lamport)
 					if err := clientStream.Send(&proto.ServerMessage{Name: name, Message: msg.GetMessage(), Lamport: lamport}); err != nil {
-						log.Printf("Error sending to %s: %v", strings.TrimRight(clientName, "\n"), err)
+						log.Printf("Error sending to %s: %v", strings.TrimRight(clientName, newLine), err)
 					}
 
 				}
@@ -101,7 +103,13 @@ func (s *chitchatServer) SendReceive(stream proto.Chitchat_SendReceiveServer) er
 }
 
 func main() {
-	file, err := openLogFile("./mylog.log")
+	if runtime.GOOS == "windows" {
+		newLine = "\r\n"
+	} else {
+		newLine = "\n"
+	}
+
+	file, err := openLogFile("../mylog.log")
 	if err != nil {
 		log.Fatalf("Not working")
 	}
