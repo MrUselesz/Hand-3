@@ -13,45 +13,45 @@ import (
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion7
 
-// ITUDatabaseClient is the client API for ITUDatabase service.
+// ChitchatClient is the client API for Chitchat service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type ITUDatabaseClient interface {
-	SendReceive(ctx context.Context, opts ...grpc.CallOption) (ITUDatabase_SendReceiveClient, error)
+type ChitchatClient interface {
+	SendReceive(ctx context.Context, opts ...grpc.CallOption) (Chitchat_SendReceiveClient, error)
 }
 
-type iTUDatabaseClient struct {
+type chitchatClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewITUDatabaseClient(cc grpc.ClientConnInterface) ITUDatabaseClient {
-	return &iTUDatabaseClient{cc}
+func NewChitchatClient(cc grpc.ClientConnInterface) ChitchatClient {
+	return &chitchatClient{cc}
 }
 
-func (c *iTUDatabaseClient) SendReceive(ctx context.Context, opts ...grpc.CallOption) (ITUDatabase_SendReceiveClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_ITUDatabase_serviceDesc.Streams[0], "/ITUDatabase/SendReceive", opts...)
+func (c *chitchatClient) SendReceive(ctx context.Context, opts ...grpc.CallOption) (Chitchat_SendReceiveClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Chitchat_serviceDesc.Streams[0], "/chitchat/SendReceive", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &iTUDatabaseSendReceiveClient{stream}
+	x := &chitchatSendReceiveClient{stream}
 	return x, nil
 }
 
-type ITUDatabase_SendReceiveClient interface {
+type Chitchat_SendReceiveClient interface {
 	Send(*ClientMessage) error
 	Recv() (*ServerMessage, error)
 	grpc.ClientStream
 }
 
-type iTUDatabaseSendReceiveClient struct {
+type chitchatSendReceiveClient struct {
 	grpc.ClientStream
 }
 
-func (x *iTUDatabaseSendReceiveClient) Send(m *ClientMessage) error {
+func (x *chitchatSendReceiveClient) Send(m *ClientMessage) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *iTUDatabaseSendReceiveClient) Recv() (*ServerMessage, error) {
+func (x *chitchatSendReceiveClient) Recv() (*ServerMessage, error) {
 	m := new(ServerMessage)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -59,53 +59,53 @@ func (x *iTUDatabaseSendReceiveClient) Recv() (*ServerMessage, error) {
 	return m, nil
 }
 
-// ITUDatabaseServer is the server API for ITUDatabase service.
-// All implementations must embed UnimplementedITUDatabaseServer
+// ChitchatServer is the server API for Chitchat service.
+// All implementations must embed UnimplementedChitchatServer
 // for forward compatibility
-type ITUDatabaseServer interface {
-	SendReceive(ITUDatabase_SendReceiveServer) error
-	mustEmbedUnimplementedITUDatabaseServer()
+type ChitchatServer interface {
+	SendReceive(Chitchat_SendReceiveServer) error
+	mustEmbedUnimplementedChitchatServer()
 }
 
-// UnimplementedITUDatabaseServer must be embedded to have forward compatible implementations.
-type UnimplementedITUDatabaseServer struct {
+// UnimplementedChitchatServer must be embedded to have forward compatible implementations.
+type UnimplementedChitchatServer struct {
 }
 
-func (UnimplementedITUDatabaseServer) SendReceive(ITUDatabase_SendReceiveServer) error {
+func (UnimplementedChitchatServer) SendReceive(Chitchat_SendReceiveServer) error {
 	return status.Errorf(codes.Unimplemented, "method SendReceive not implemented")
 }
-func (UnimplementedITUDatabaseServer) mustEmbedUnimplementedITUDatabaseServer() {}
+func (UnimplementedChitchatServer) mustEmbedUnimplementedChitchatServer() {}
 
-// UnsafeITUDatabaseServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to ITUDatabaseServer will
+// UnsafeChitchatServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ChitchatServer will
 // result in compilation errors.
-type UnsafeITUDatabaseServer interface {
-	mustEmbedUnimplementedITUDatabaseServer()
+type UnsafeChitchatServer interface {
+	mustEmbedUnimplementedChitchatServer()
 }
 
-func RegisterITUDatabaseServer(s *grpc.Server, srv ITUDatabaseServer) {
-	s.RegisterService(&_ITUDatabase_serviceDesc, srv)
+func RegisterChitchatServer(s *grpc.Server, srv ChitchatServer) {
+	s.RegisterService(&_Chitchat_serviceDesc, srv)
 }
 
-func _ITUDatabase_SendReceive_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(ITUDatabaseServer).SendReceive(&iTUDatabaseSendReceiveServer{stream})
+func _Chitchat_SendReceive_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ChitchatServer).SendReceive(&chitchatSendReceiveServer{stream})
 }
 
-type ITUDatabase_SendReceiveServer interface {
+type Chitchat_SendReceiveServer interface {
 	Send(*ServerMessage) error
 	Recv() (*ClientMessage, error)
 	grpc.ServerStream
 }
 
-type iTUDatabaseSendReceiveServer struct {
+type chitchatSendReceiveServer struct {
 	grpc.ServerStream
 }
 
-func (x *iTUDatabaseSendReceiveServer) Send(m *ServerMessage) error {
+func (x *chitchatSendReceiveServer) Send(m *ServerMessage) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *iTUDatabaseSendReceiveServer) Recv() (*ClientMessage, error) {
+func (x *chitchatSendReceiveServer) Recv() (*ClientMessage, error) {
 	m := new(ClientMessage)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -113,14 +113,14 @@ func (x *iTUDatabaseSendReceiveServer) Recv() (*ClientMessage, error) {
 	return m, nil
 }
 
-var _ITUDatabase_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "ITUDatabase",
-	HandlerType: (*ITUDatabaseServer)(nil),
+var _Chitchat_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "chitchat",
+	HandlerType: (*ChitchatServer)(nil),
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "SendReceive",
-			Handler:       _ITUDatabase_SendReceive_Handler,
+			Handler:       _Chitchat_SendReceive_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},

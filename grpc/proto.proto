@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "ITUServer/grpc/proto";
+option go_package = "chitchat/grpc/proto";
 
 message ClientMessage {
     string name = 1;
@@ -18,7 +18,7 @@ message ServerMessage {
 
 message Empty {}
 
-service ITUDatabase {
+service chitchat {
    
     rpc SendReceive (stream ClientMessage) returns (stream ServerMessage) {};
     
