@@ -67,7 +67,7 @@ func (s *chitchatServer) SendReceive(stream proto.Chitchat_SendReceiveServer) er
 			}
 			lamport += 1
 
-			if msg.GetMessage() == "/leave" {
+			if msg.GetMessage() == "/leave"+newLine {
 				s.mu.Lock()
 				log.Println("%s recieved message about leaving from", strings.TrimRight(name, newLine), lamport)
 				delete(s.clients, name)
